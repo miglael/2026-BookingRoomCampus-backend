@@ -144,14 +144,17 @@ namespace BookingRoomCampus.Controllers
                 return BadRequest("Jam tidak valid, jam mulai harus lebih dulu dari jam selesai");
             }
 
-            var existingBookings = await _context.Bookings.Where(b => b.Ruangan == booking.Ruangan &&
-                b.Tanggal.Date == booking.Tanggal.Date).ToListAsync();
+            // ambil booking yang sama ruangan dan tanggal
+            var existingBookings = await _context.Bookings
+                .Where(b => b.Ruangan == booking.Ruangan &&
+                            b.Tanggal.Date == booking.Tanggal.Date)
+                .ToListAsync();
 
+            // cek bentrok di memory (bukan SQL)
             var isBentrok = existingBookings.Any(b =>
                 TimeSpan.Parse(b.JamMulai) < jamSelesai &&
                 TimeSpan.Parse(b.JamSelesai) > jamMulai
             );
-
 
             if (isBentrok)
             {
