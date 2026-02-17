@@ -144,14 +144,14 @@ namespace BookingRoomCampus.Controllers
                 return BadRequest("Jam tidak valid, jam mulai harus lebih dulu dari jam selesai");
             }
 
-            // Validasi cegah double booking
-            var isBentrok = await _context.Bookings.AnyAsync(b => b.Ruangan == booking.Ruangan &&
-            b.Tanggal.Date == booking.Tanggal.Date &&
-            (
+            var existingBookings = await _context.Bookings.Where(b => b.Ruangan == booking.Ruangan &&
+                b.Tanggal.Date == booking.Tanggal.Date).ToListAsync();
+
+            var isBentrok = existingBookings.Any(b =>
                 TimeSpan.Parse(b.JamMulai) < jamSelesai &&
                 TimeSpan.Parse(b.JamSelesai) > jamMulai
-            )
             );
+
 
             if (isBentrok)
             {
