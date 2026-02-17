@@ -6,7 +6,6 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
-using System.Security.Cryptography;
 
 namespace BookingRoomCampus.Controllers
 {
@@ -25,12 +24,16 @@ namespace BookingRoomCampus.Controllers
 
         //Register
         [HttpPost("register")]
-        public async Task<IActionResult> Register(string email, string password)
+        public async Task<IActionResult> Register(
+        string fullName,
+        string email,
+        string password)
         {
             var user = new ApplicationUser
             {
                 UserName = email,
-                Email = email
+                Email = email,
+                FullName = fullName
             };
 
             var result = await _userManager.CreateAsync(user, password);
@@ -44,6 +47,8 @@ namespace BookingRoomCampus.Controllers
 
             return Ok("User berhasil dibuat");
         }
+
+
 
         //Login
         [HttpPost("Login")]

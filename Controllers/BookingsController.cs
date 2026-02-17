@@ -3,6 +3,8 @@ using BookingRoomCampus.Data;
 using BookingRoomCampus.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+
 
 namespace BookingRoomCampus.Controllers
 {
@@ -22,33 +24,35 @@ namespace BookingRoomCampus.Controllers
         [HttpGet]
         [Authorize(Roles = "Admin,User")]
         public async Task<ActionResult<IEnumerable<Booking>>> GetBookings(
-            string? nama,
-            string? ruangan,
-            string? status,
-            string? sortBy)
-
+        string? nama,
+        string? ruangan,
+        string? status,
+        string? sortBy)
         {
             var query = _context.Bookings.AsQueryable();
 
-            //filter nama
-            if (!string.IsNullOrEmpty(nama))
+            // FILTER NAMA (case insensitive)
+            if (!string.IsNullOrWhiteSpace(nama))
             {
-                query = query.Where(b => b.NamaPeminjam.Contains(nama));
+                var n = nama.Trim().ToLower();
+                query = query.Where(b => b.NamaPeminjam.ToLower().Contains(n));
             }
 
-            //filter ruangan
-            if (!string.IsNullOrEmpty(ruangan))
+            // FILTER RUANGAN (case insensitive)
+            if (!string.IsNullOrWhiteSpace(ruangan))
             {
-                query = query.Where(b => b.Ruangan.Contains(ruangan));
+                var r = ruangan.Trim().ToLower();
+                query = query.Where(b => b.Ruangan.ToLower().Contains(r));
             }
 
-            //filter status
-            if (!string.IsNullOrEmpty(status))
+            // FILTER STATUS
+            if (!string.IsNullOrWhiteSpace(status))
             {
-                query = query.Where(b => b.Status == status);
+                var s = status.Trim().ToLower();
+                query = query.Where(b => b.Status.ToLower() == s);
             }
 
-            //sorting
+            // SORTING
             if (sortBy == "tanggal")
             {
                 query = query.OrderBy(b => b.Tanggal);
@@ -56,6 +60,7 @@ namespace BookingRoomCampus.Controllers
 
             return await query.ToListAsync();
         }
+
 
 
         //GET: api/bookings
@@ -110,21 +115,31 @@ namespace BookingRoomCampus.Controllers
 
         //DELETE: api/bookings
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,User")]
         public async Task<IActionResult> DeleteBooking(int id)
         {
             var booking = await _context.Bookings.FindAsync(id);
 
             if (booking == null)
-            {
                 return NotFound();
-            }
+
+            var userEmail = User.Identity.Name;
+            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            // kalau bukan admin → harus milik sendiri
+            if (userRole != "Admin" && booking.NamaPeminjam != userEmail)
+                return Forbid();
+
+            // hanya boleh cancel jika masih menunggu
+            if (booking.Status != "Menunggu" && userRole != "Admin")
+                return BadRequest("Booking sudah diproses, tidak bisa dibatalkan");
 
             _context.Bookings.Remove(booking);
             await _context.SaveChangesAsync();
 
             return NoContent();
         }
+
 
         //POST: api/bookings
         [HttpPost]
